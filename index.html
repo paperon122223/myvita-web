@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MyVita — Tu asistente personal de medicación. Controla prescripciones, alarmas nativas, IA médica y pastillero inteligente.">
+  <meta name="keywords" content="medicamentos, salud, app, alarmas, inteligencia artificial, pastillero, México">
+  <meta property="og:title" content="MyVita — Tu asistente de medicación">
+  <meta property="og:description" content="Nunca olvides tomar tu medicamento. IA médica, alarmas nativas para tu reloj y pastillero inteligente con ESP32.">
+  <meta property="og:type" content="website">
+  <title>MyVita — Tu asistente de medicación</title>
+
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --blue:   #0288d1;
+      --green:  #00c853;
+      --grad:   linear-gradient(135deg, #0288d1, #00c853);
+      --dark:   #0f172a;
+      --card:   #ffffff;
+      --muted:  #64748b;
+      --border: #e2e8f0;
+      --radius: 20px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f8fafc;
+      color: #1a202c;
+      overflow-x: hidden;
+    }
+
+    /* ══════════════════════════════════════
+       NAV
+    ══════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 64px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 1.3rem;
+      background: var(--grad); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+      text-decoration: none;
+    }
+    .nav-logo .material-icons {
+      background: var(--grad); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+      font-size: 28px;
+    }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a { text-decoration: none; color: #4a5568; font-size: .9rem; font-weight: 500; transition: color .2s; }
+    .nav-links a:hover { color: var(--blue); }
+    .nav-cta {
+      background: var(--grad); color: white; border: none;
+      border-radius: 24px; padding: 9px 22px;
+      font-family: 'Poppins', sans-serif; font-size: .85rem;
+      font-weight: 700; cursor: pointer; text-decoration: none;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 14px rgba(2,136,209,.35);
+    }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(2,136,209,.4); }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+    }
+
+    /* ══════════════════════════════════════
+       HERO
+    ══════════════════════════════════════ */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e3f2fd 0%, #e8f5e9 50%, #fff 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 100px 24px 60px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(2,136,209,.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: '';
+      position: absolute; bottom: -150px; left: -150px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,200,83,.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero-content {
+      max-width: 1100px; width: 100%;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px;
+      align-items: center; position: relative; z-index: 1;
+    }
+    @media (max-width: 768px) { .hero-content { grid-template-columns: 1fr; text-align: center; } }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(2,136,209,.1); color: var(--blue);
+      border-radius: 20px; padding: 5px 14px; font-size: .8rem;
+      font-weight: 600; margin-bottom: 20px; border: 1px solid rgba(2,136,209,.2);
+    }
+    .hero-badge .material-icons { font-size: 14px; }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 900; line-height: 1.1;
+      color: #0f172a; margin-bottom: 20px;
+    }
+    .hero h1 span {
+      background: var(--grad); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-desc {
+      font-size: 1.05rem; color: var(--muted);
+      line-height: 1.7; margin-bottom: 36px; max-width: 480px;
+    }
+    .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+    @media (max-width: 768px) { .hero-btns { justify-content: center; } }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--grad); color: white;
+      border: none; border-radius: 14px;
+      padding: 14px 28px; font-family: 'Poppins', sans-serif;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(2,136,209,.35);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(2,136,209,.45); }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 2px solid var(--blue); color: var(--blue);
+      border-radius: 14px; padding: 13px 28px;
+      font-family: 'Poppins', sans-serif; font-size: 1rem;
+      font-weight: 700; cursor: pointer; text-decoration: none;
+      background: transparent; transition: all .2s;
+    }
+    .btn-outline:hover { background: var(--blue); color: white; }
+
+    /* ── Teléfono mockup ── */
+    .phone-mockup {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+    }
+    @media (max-width: 768px) { .phone-mockup { order: -1; } }
+
+    .phone-frame {
+      width: 240px; height: 490px;
+      background: #0f172a;
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow: 0 40px 80px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.1);
+      position: relative;
+    }
+    .phone-screen {
+      width: 100%; height: 100%;
+      border-radius: 36px;
+      background: linear-gradient(160deg, #0288d1 0%, #00c853 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; overflow: hidden; position: relative;
+    }
+    .phone-notch {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 24px;
+      background: #0f172a; border-radius: 0 0 16px 16px;
+    }
+    .phone-app-icon { font-size: 52px; color: white; }
+    .phone-app-name { font-size: 1.5rem; font-weight: 800; color: white; }
+    .phone-app-sub { font-size: .7rem; color: rgba(255,255,255,.75); }
+
+    /* Mini-cards flotantes */
+    .float-card {
+      position: absolute;
+      background: white; border-radius: 14px;
+      padding: 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+      display: flex; align-items: center; gap: 8px;
+      animation: float-card 3s ease-in-out infinite;
+    }
+    .float-card .material-icons { font-size: 18px; color: var(--blue); }
+    .float-card .fc-text { font-size: .72rem; font-weight: 600; color: #1a202c; }
+    .float-card .fc-sub  { font-size: .6rem; color: var(--muted); }
+
+    .fc-1 { top: 40px; right: -70px; animation-delay: 0s; }
+    .fc-2 { top: 180px; left: -80px; animation-delay: .8s; }
+    .fc-3 { bottom: 80px; right: -60px; animation-delay: 1.6s; }
+
+    @keyframes float-card {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    /* ── Stats ── */
+    .hero-stats {
+      display: flex; gap: 32px; margin-top: 36px; flex-wrap: wrap;
+    }
+    @media (max-width: 768px) { .hero-stats { justify-content: center; } }
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.8rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: .75rem; color: var(--muted); font-weight: 500; }
+
+    /* ══════════════════════════════════════
+       SECCIONES GENERALES
+    ══════════════════════════════════════ */
+    section { padding: 80px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block; background: rgba(2,136,209,.1); color: var(--blue);
+      border-radius: 20px; padding: 4px 14px; font-size: .78rem;
+      font-weight: 600; margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800;
+      color: #0f172a; margin-bottom: 14px; line-height: 1.2;
+    }
+    .section-title span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .section-desc { font-size: 1rem; color: var(--muted); max-width: 560px; line-height: 1.7; margin-bottom: 48px; }
+
+    /* ══════════════════════════════════════
+       EL PROBLEMA
+    ══════════════════════════════════════ */
+    .problema { background: #0f172a; color: white; }
+    .problema .section-title { color: white; }
+    .problema .section-desc { color: #94a3b8; }
+    .problema .section-tag { background: rgba(96,165,250,.15); color: #60a5fa; }
+
+    .stat-cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;
+    }
+    .stat-card-big {
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius); padding: 28px 24px; text-align: center;
+      transition: transform .2s;
+    }
+    .stat-card-big:hover { transform: translateY(-4px); }
+    .stat-card-big .big-num {
+      font-size: 2.8rem; font-weight: 900; display: block; margin-bottom: 8px;
+      background: var(--grad); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-card-big p { font-size: .85rem; color: #94a3b8; line-height: 1.5; }
+
+    /* ══════════════════════════════════════
+       CARACTERÍSTICAS
+    ══════════════════════════════════════ */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;
+    }
+    .feature-card {
+      background: white; border-radius: var(--radius);
+      padding: 28px 24px; box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      border: 1px solid var(--border); transition: transform .2s, box-shadow .2s;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 12px 36px rgba(0,0,0,.1); }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .feature-icon .material-icons { font-size: 26px; color: white; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+    .feature-card p  { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+    .feature-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #f0f9ff; color: var(--blue); border-radius: 10px;
+      padding: 3px 10px; font-size: .72rem; font-weight: 600;
+      align-self: flex-start;
+    }
+    .feature-badge.new { background: #f0fdf4; color: #16a34a; }
+    .feature-badge.soon { background: #fefce8; color: #ca8a04; }
+
+    /* ══════════════════════════════════════
+       CÓMO FUNCIONA
+    ══════════════════════════════════════ */
+    .steps { background: #f8fafc; }
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 28px;
+    }
+    .step-card { text-align: center; }
+    .step-num {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--grad); color: white;
+      font-size: 1.3rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 6px 18px rgba(2,136,209,.3);
+    }
+    .step-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .step-card p  { font-size: .83rem; color: var(--muted); line-height: 1.6; }
+
+    /* ══════════════════════════════════════
+       PASTILLERO INTELIGENTE
+    ══════════════════════════════════════ */
+    .iot-section { background: linear-gradient(160deg, #e3f2fd 0%, #e8f5e9 100%); }
+    .iot-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+    }
+    @media (max-width: 768px) { .iot-grid { grid-template-columns: 1fr; } }
+
+    .iot-visual {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+    .pill-box {
+      background: white; border-radius: 24px;
+      padding: 24px; box-shadow: 0 16px 48px rgba(0,0,0,.12);
+      width: 100%; max-width: 320px;
+    }
+    .pill-box-title { font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: 14px; text-align: center; letter-spacing: .08em; text-transform: uppercase; }
+    .pill-compartments {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+    }
+    .pill-comp {
+      aspect-ratio: 1; border-radius: 10px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 2px; font-size: .55rem; font-weight: 700;
+      transition: all .3s;
+    }
+    .pill-comp.on {
+      background: linear-gradient(135deg, #0288d1, #00c853);
+      color: white; box-shadow: 0 4px 12px rgba(2,136,209,.4);
+      animation: led-pulse 2s ease-in-out infinite;
+    }
+    .pill-comp.off { background: #f1f5f9; color: #94a3b8; }
+    .pill-comp.taken { background: #dcfce7; color: #16a34a; }
+    @keyframes led-pulse {
+      0%,100% { box-shadow: 0 4px 12px rgba(2,136,209,.3); }
+      50%      { box-shadow: 0 4px 20px rgba(2,136,209,.7); }
+    }
+    .pill-comp .comp-day { font-size: .5rem; }
+    .pill-comp .comp-icon { font-size: .9rem; }
+
+    .iot-steps { display: flex; flex-direction: column; gap: 20px; }
+    .iot-step { display: flex; gap: 16px; align-items: flex-start; }
+    .iot-step-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--grad); display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .iot-step-icon .material-icons { font-size: 22px; color: white; }
+    .iot-step h4 { font-size: .95rem; font-weight: 700; margin-bottom: 4px; }
+    .iot-step p  { font-size: .83rem; color: var(--muted); line-height: 1.5; }
+
+    /* ══════════════════════════════════════
+       TECNOLOGÍA
+    ══════════════════════════════════════ */
+    .tech-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px;
+    }
+    .tech-item {
+      background: white; border-radius: 16px; padding: 20px 16px;
+      text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      border: 1px solid var(--border); transition: transform .2s;
+    }
+    .tech-item:hover { transform: translateY(-3px); }
+    .tech-item .tech-icon { font-size: 2rem; margin-bottom: 8px; }
+    .tech-item .tech-name { font-size: .8rem; font-weight: 700; color: #1a202c; margin-bottom: 2px; }
+    .tech-item .tech-desc { font-size: .68rem; color: var(--muted); }
+
+    /* ══════════════════════════════════════
+       ROADMAP
+    ══════════════════════════════════════ */
+    .roadmap { background: #0f172a; }
+    .roadmap .section-title { color: white; }
+    .roadmap .section-desc  { color: #94a3b8; }
+    .roadmap .section-tag   { background: rgba(96,165,250,.15); color: #60a5fa; }
+
+    .timeline {
+      position: relative; display: flex; flex-direction: column; gap: 0;
+    }
+    .timeline::before {
+      content: ''; position: absolute; left: 18px; top: 0; bottom: 0;
+      width: 2px; background: linear-gradient(to bottom, #0288d1, #00c853);
+    }
+    .tl-item { display: flex; gap: 20px; padding: 0 0 36px 0; position: relative; }
+    .tl-dot {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; position: relative; z-index: 1;
+    }
+    .tl-dot.done    { background: linear-gradient(135deg, #0288d1, #00c853); }
+    .tl-dot.current { background: linear-gradient(135deg, #f59e0b, #ef4444); animation: pulse-dot 2s infinite; }
+    .tl-dot.future  { background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.2); }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.4); }
+      50%      { box-shadow: 0 0 0 10px rgba(245,158,11,0); }
+    }
+    .tl-content { padding-top: 4px; }
+    .tl-phase { font-size: .72rem; font-weight: 600; color: #60a5fa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; }
+    .tl-title { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 6px; }
+    .tl-desc  { font-size: .83rem; color: #94a3b8; line-height: 1.5; }
+    .tl-tags  { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tl-tag {
+      background: rgba(255,255,255,.08); color: #cbd5e1;
+      border-radius: 8px; padding: 2px 10px; font-size: .7rem; font-weight: 500;
+    }
+
+    /* ══════════════════════════════════════
+       EQUIPO
+    ══════════════════════════════════════ */
+    .team-card {
+      background: white; border-radius: var(--radius);
+      padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      display: flex; gap: 28px; align-items: center; max-width: 600px; margin: 0 auto;
+    }
+    @media (max-width: 500px) { .team-card { flex-direction: column; text-align: center; } }
+    .team-avatar {
+      width: 80px; height: 80px; border-radius: 50%; flex-shrink: 0;
+      background: var(--grad); display: flex; align-items: center;
+      justify-content: center; box-shadow: 0 8px 24px rgba(2,136,209,.3);
+    }
+    .team-avatar .material-icons { font-size: 40px; color: white; }
+    .team-name { font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+    .team-role { font-size: .85rem; color: var(--blue); font-weight: 600; margin-bottom: 8px; }
+    .team-desc { font-size: .83rem; color: var(--muted); line-height: 1.6; }
+
+    /* ══════════════════════════════════════
+       CTA FINAL
+    ══════════════════════════════════════ */
+    .cta-section {
+      background: var(--grad); text-align: center; padding: 80px 24px;
+    }
+    .cta-section h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; color: white; margin-bottom: 14px; }
+    .cta-section p  { font-size: 1rem; color: rgba(255,255,255,.85); margin-bottom: 36px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-white {
+      background: white; color: var(--blue); border: none; border-radius: 14px;
+      padding: 14px 28px; font-family: 'Poppins', sans-serif;
+      font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); transition: transform .15s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-white:hover { transform: translateY(-2px); }
+    .btn-white-outline {
+      background: transparent; color: white; border: 2px solid white;
+      border-radius: 14px; padding: 13px 28px;
+      font-family: 'Poppins', sans-serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; text-decoration: none; display: inline-flex;
+      align-items: center; gap: 8px; transition: all .2s;
+    }
+    .btn-white-outline:hover { background: white; color: var(--blue); }
+
+    /* ══════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════ */
+    footer {
+      background: #0f172a; color: #94a3b8;
+      padding: 40px 24px; text-align: center;
+    }
+    .footer-logo { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+    .footer-links a { color: #64748b; text-decoration: none; font-size: .85rem; transition: color .2s; }
+    .footer-links a:hover { color: #60a5fa; }
+    .footer-copy { font-size: .78rem; color: #475569; margin-top: 8px; }
+    .footer-made { font-size: .78rem; color: #334155; margin-top: 4px; }
+
+    /* ══════════════════════════════════════
+       SCROLL ANIMATIONS
+    ══════════════════════════════════════ */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAV ══════════════════════════════════════════════════ -->
+  <nav>
+    <a class="nav-logo" href="#">
+      <span class="material-icons">favorite</span> MyVita
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Características</a></li>
+      <li><a href="#iot">Pastillero</a></li>
+      <li><a href="#tech">Tecnología</a></li>
+      <li><a href="#roadmap">Futuro</a></li>
+    </ul>
+    <a class="nav-cta" href="#cta">
+      <span class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:4px">download</span>
+      Descargar APK
+    </a>
+  </nav>
+
+  <!-- ══ HERO ═════════════════════════════════════════════════ -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div>
+        <div class="hero-badge">
+          <span class="material-icons">auto_awesome</span>
+          Proyecto de innovación médica · México
+        </div>
+        <h1>Tu salud,<br><span>perfectamente</span><br>organizada</h1>
+        <p class="hero-desc">
+          MyVita es un asistente médico personal que combina
+          <strong>inteligencia artificial</strong>, alarmas nativas para tu
+          <strong>smartwatch</strong> y un <strong>pastillero inteligente ESP32</strong>
+          para que nunca olvides tomar tu medicamento.
+        </p>
+        <div class="hero-btns">
+          <a href="#cta" class="btn-primary">
+            <span class="material-icons">download</span> Descargar gratis
+          </a>
+          <a href="#features" class="btn-outline">
+            <span class="material-icons">play_circle</span> Ver más
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><div class="stat-num">7+</div><div class="stat-label">Features</div></div>
+          <div class="stat"><div class="stat-num">IA</div><div class="stat-label">Asistente médico</div></div>
+          <div class="stat"><div class="stat-num">BLE</div><div class="stat-label">Pastillero IoT</div></div>
+          <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Gratuita</div></div>
+        </div>
+      </div>
+
+      <div class="phone-mockup">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <span class="material-icons phone-app-icon">favorite</span>
+            <p class="phone-app-name">MyVita</p>
+            <p class="phone-app-sub">Tu asistente de medicación</p>
+          </div>
+        </div>
+        <div class="float-card fc-1">
+          <span class="material-icons">check_circle</span>
+          <div><div class="fc-text">Toma registrada</div><div class="fc-sub">Paracetamol 500mg ✓</div></div>
+        </div>
+        <div class="float-card fc-2">
+          <span class="material-icons">psychology</span>
+          <div><div class="fc-text">IA médica</div><div class="fc-sub">Análisis en tiempo real</div></div>
+        </div>
+        <div class="float-card fc-3">
+          <span class="material-icons">watch</span>
+          <div><div class="fc-text">Redmi Watch 5</div><div class="fc-sub">Alarma enviada ✓</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EL PROBLEMA ══════════════════════════════════════════ -->
+  <section class="problema">
+    <div class="section-inner">
+      <div class="section-tag reveal">El problema</div>
+      <h2 class="section-title reveal">El olvido de medicamentos<br>es un problema de salud pública</h2>
+      <p class="section-desc reveal">
+        En México y América Latina, la falta de adherencia al tratamiento médico
+        causa complicaciones graves que son completamente evitables.
+      </p>
+      <div class="stat-cards">
+        <div class="stat-card-big reveal">
+          <span class="big-num">50%</span>
+          <p>de los pacientes con enfermedades crónicas <strong>no toman su medicamento</strong> correctamente</p>
+        </div>
+        <div class="stat-card-big reveal">
+          <span class="big-num">125K</span>
+          <p>muertes anuales en EE.UU. atribuibles a <strong>no seguir el tratamiento</strong> prescrito</p>
+        </div>
+        <div class="stat-card-big reveal">
+          <span class="big-num">70%</span>
+          <p>de los adultos mayores <strong>olvidan al menos una toma</strong> por semana</p>
+        </div>
+        <div class="stat-card-big reveal">
+          <span class="big-num">$300B</span>
+          <p>en costos médicos evitables anuales relacionados con <strong>falta de adherencia</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CARACTERÍSTICAS ══════════════════════════════════════ -->
+  <section id="features">
+    <div class="section-inner">
+      <div class="section-tag reveal">Solución</div>
+      <h2 class="section-title reveal">Todo lo que necesitas para<br><span>controlar tu salud</span></h2>
+      <p class="section-desc reveal">MyVita integra tecnología de punta en una app móvil gratuita para Android.</p>
+      <div class="features-grid">
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#0288d1,#00c853)">
+            <span class="material-icons">alarm</span>
+          </div>
+          <h3>Alarmas nativas del sistema</h3>
+          <p>Las alarmas se crean directamente en Google Clock. Suenan aunque la app esté cerrada, en pantalla bloqueada y en tu smartwatch.</p>
+          <span class="feature-badge">Redmi Watch 5 ✓</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#7b1fa2,#0288d1)">
+            <span class="material-icons">psychology</span>
+          </div>
+          <h3>Asistente médico con IA</h3>
+          <p>Pregunta sobre interacciones, efectos secundarios, horarios óptimos. Impulsado por LLaMA 3.1 vía Groq — respuestas en español.</p>
+          <span class="feature-badge">LLaMA 3.1 · Groq</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">
+            <span class="material-icons">camera_alt</span>
+          </div>
+          <h3>Escaneo de recetas con IA</h3>
+          <p>Toma foto a tu receta médica. OCR + IA extrae automáticamente el medicamento, dosis, frecuencia y nombre del médico.</p>
+          <span class="feature-badge">Tesseract + IA</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#00c853,#0288d1)">
+            <span class="material-icons">edit_note</span>
+          </div>
+          <h3>Diario médico personal</h3>
+          <p>Registra cómo te sientes cada día: estado de ánimo, síntomas, notas. Tira visual de los últimos 7 días con emojis.</p>
+          <span class="feature-badge">SQLite local</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b)">
+            <span class="material-icons">supervisor_account</span>
+          </div>
+          <h3>Modo Cuidador</h3>
+          <p>Genera un código de 6 dígitos. Tu familiar lo ingresa en su app y puede ver tus alarmas del día y si tomaste tu medicamento.</p>
+          <span class="feature-badge">Vinculación segura</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#0288d1,#7b1fa2)">
+            <span class="material-icons">inventory_2</span>
+          </div>
+          <h3>Control de inventario</h3>
+          <p>Sabe cuántas pastillas te quedan. Se descuenta automáticamente con cada toma. Alerta cuando el stock está bajo.</p>
+          <span class="feature-badge new">Auto-descuento ✓</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#00c853,#f59e0b)">
+            <span class="material-icons">dashboard</span>
+          </div>
+          <h3>Dashboard de adherencia</h3>
+          <p>Gráfica semanal de tomas completadas vs perdidas. Racha de días, porcentaje mensual de adherencia y análisis de IA.</p>
+          <span class="feature-badge">Chart.js</span>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#ef4444,#0288d1)">
+            <span class="material-icons">emergency</span>
+          </div>
+          <h3>Sistema SOS de emergencia</h3>
+          <p>Un toque envía tu ubicación GPS vía WhatsApp a tus contactos de emergencia. Mensaje personalizable con cuenta regresiva.</p>
+          <span class="feature-badge">GPS + WhatsApp</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CÓMO FUNCIONA ══════════════════════════════════════════ -->
+  <section class="steps">
+    <div class="section-inner">
+      <div class="section-tag reveal">Flujo</div>
+      <h2 class="section-title reveal">¿Cómo funciona<br><span>MyVita</span>?</h2>
+      <p class="section-desc reveal">En 4 pasos simples tienes el control total de tu medicación.</p>
+      <div class="steps-grid">
+        <div class="step-card reveal">
+          <div class="step-num">1</div>
+          <h3>Registra tus prescripciones</h3>
+          <p>Ingresa manualmente o escanea tu receta. La IA extrae todos los datos automáticamente.</p>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">2</div>
+          <h3>Las alarmas se crean solas</h3>
+          <p>MyVita genera alarmas en Google Clock y en el pastillero ESP32. Suenan en tu reloj sin importar si la app está abierta.</p>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">3</div>
+          <h3>Abre el pastillero o toca la alarma</h3>
+          <p>El sensor del pastillero detecta la apertura. La toma se registra automáticamente en la app vía Bluetooth.</p>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">4</div>
+          <h3>Revisa tu progreso</h3>
+          <p>El dashboard muestra tu adherencia. La IA analiza tus patrones y sugiere mejoras. El cuidador ve tu historial.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PASTILLERO IoT ══════════════════════════════════════════ -->
+  <section class="iot-section" id="iot">
+    <div class="section-inner">
+      <div class="iot-grid">
+        <div>
+          <div class="section-tag reveal">Innovación IoT</div>
+          <h2 class="section-title reveal">Pastillero inteligente<br><span>con ESP32</span></h2>
+          <p class="section-desc reveal" style="margin-bottom:28px">
+            Un pastillero físico conectado vía Bluetooth que se sincroniza con la app.
+            Los LEDs indican qué compartimento abrir. Al abrirlo, la toma se registra sola.
+          </p>
+          <div class="iot-steps">
+            <div class="iot-step reveal">
+              <div class="iot-step-icon"><span class="material-icons">bolt</span></div>
+              <div>
+                <h4>LED indica el compartimento</h4>
+                <p>A la hora de la toma, el LED del compartimento correcto parpadea y el buzzer suena.</p>
+              </div>
+            </div>
+            <div class="iot-step reveal">
+              <div class="iot-step-icon"><span class="material-icons">sensors</span></div>
+              <div>
+                <h4>Reed switch detecta la apertura</h4>
+                <p>El sensor magnético detecta cuando abres el compartimento y envía la señal al ESP32.</p>
+              </div>
+            </div>
+            <div class="iot-step reveal">
+              <div class="iot-step-icon"><span class="material-icons">bluetooth</span></div>
+              <div>
+                <h4>BLE notifica a la app</h4>
+                <p>El ESP32 envía la notificación via Bluetooth. MyVita marca la toma en SQLite automáticamente.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="iot-visual reveal">
+          <div class="pill-box">
+            <div class="pill-box-title">MyVita Pastillero Inteligente</div>
+            <div class="pill-compartments">
+              <div class="pill-comp taken"><span class="comp-day">LUN</span><span class="comp-icon">✅</span></div>
+              <div class="pill-comp taken"><span class="comp-day">MAR</span><span class="comp-icon">✅</span></div>
+              <div class="pill-comp on"><span class="comp-day">MIÉ</span><span class="comp-icon">💊</span></div>
+              <div class="pill-comp off"><span class="comp-day">JUE</span><span class="comp-icon">○</span></div>
+              <div class="pill-comp off"><span class="comp-day">VIE</span><span class="comp-icon">○</span></div>
+              <div class="pill-comp off"><span class="comp-day">SÁB</span><span class="comp-icon">○</span></div>
+              <div class="pill-comp off"><span class="comp-day">DOM</span><span class="comp-icon">○</span></div>
+            </div>
+            <p style="text-align:center;font-size:.7rem;color:#64748b;margin-top:12px">
+              🟢 LED activo · Miércoles en curso
+            </p>
+          </div>
+          <div style="background:white;border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.08);width:100%;max-width:320px">
+            <p style="font-size:.75rem;font-weight:700;color:#0f172a;margin-bottom:8px">🔌 Hardware (~$12 USD total)</p>
+            <p style="font-size:.72rem;color:#64748b;line-height:1.6">
+              • ESP32-C3 Super Mini<br>
+              • 7× LEDs + resistencias<br>
+              • 7× Reed switches magnéticos<br>
+              • 1× Buzzer pasivo<br>
+              • Caja impresa en 3D
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ TECNOLOGÍA ════════════════════════════════════════════ -->
+  <section id="tech">
+    <div class="section-inner">
+      <div class="section-tag reveal">Stack</div>
+      <h2 class="section-title reveal">Tecnología que<br><span>lo hace posible</span></h2>
+      <p class="section-desc reveal">MyVita combina tecnologías modernas en una arquitectura segura y escalable.</p>
+      <div class="tech-grid">
+        <div class="tech-item reveal"><div class="tech-icon">📱</div><div class="tech-name">Apache Cordova</div><div class="tech-desc">App Android nativa</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🗄️</div><div class="tech-name">SQLite</div><div class="tech-desc">Base de datos local</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🚀</div><div class="tech-name">Node.js + Express</div><div class="tech-desc">Backend API seguro</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">☁️</div><div class="tech-name">Supabase</div><div class="tech-desc">PostgreSQL + Auth</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🤖</div><div class="tech-name">LLaMA 3.1 · Groq</div><div class="tech-desc">IA médica</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🗺️</div><div class="tech-name">Leaflet + MapTiler</div><div class="tech-desc">Mapas interactivos</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🔵</div><div class="tech-name">BLE Central</div><div class="tech-desc">Pastillero IoT</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">⚡</div><div class="tech-name">Railway</div><div class="tech-desc">Deploy en la nube</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🔧</div><div class="tech-name">ESP32-C3</div><div class="tech-desc">Microcontrolador IoT</div></div>
+        <div class="tech-item reveal"><div class="tech-icon">🔒</div><div class="tech-name">JWT + Helmet.js</div><div class="tech-desc">Seguridad backend</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ ROADMAP ════════════════════════════════════════════════ -->
+  <section class="roadmap" id="roadmap">
+    <div class="section-inner">
+      <div class="section-tag reveal">Visión</div>
+      <h2 class="section-title reveal">El futuro de<br><span>MyVita</span></h2>
+      <p class="section-desc reveal">Lo que ya está hecho y hacia dónde vamos.</p>
+      <div class="timeline">
+
+        <div class="tl-item reveal">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-phase">Fase 1 — Completada</div>
+            <div class="tl-title">MVP — Gestión de medicación</div>
+            <div class="tl-desc">App Android completa con prescripciones, alarmas, inventario, diario, dashboard de adherencia y modo cuidador.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">Cordova</span><span class="tl-tag">SQLite</span><span class="tl-tag">Alarmas nativas</span><span class="tl-tag">Modo oscuro</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item reveal">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-content">
+            <div class="tl-phase">Fase 2 — Completada</div>
+            <div class="tl-title">Backend seguro + IA médica</div>
+            <div class="tl-desc">API REST en Railway sin exponer keys. Asistente IA con LLaMA 3.1, escaneo de recetas con OCR + IA, integración con Supabase.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">Node.js</span><span class="tl-tag">Groq</span><span class="tl-tag">Tesseract OCR</span><span class="tl-tag">Railway</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item reveal">
+          <div class="tl-dot current">⚡</div>
+          <div class="tl-content">
+            <div class="tl-phase">Fase 3 — En desarrollo</div>
+            <div class="tl-title">Pastillero IoT + Smartwatch</div>
+            <div class="tl-desc">Pastillero físico con ESP32, LEDs y sensores reed switch comunicado por BLE. Integración con Redmi Watch 5 vía notificaciones Android.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">ESP32</span><span class="tl-tag">BLE</span><span class="tl-tag">Redmi Watch 5</span><span class="tl-tag">fullScreenIntent</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item reveal">
+          <div class="tl-dot future">4</div>
+          <div class="tl-content">
+            <div class="tl-phase">Fase 4 — Próxima</div>
+            <div class="tl-title">Exportación y reportes médicos</div>
+            <div class="tl-desc">Genera reportes PDF profesionales de adherencia para compartir con el médico. Historial de 90 días con análisis de IA incluido.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">jsPDF</span><span class="tl-tag">Gráficas</span><span class="tl-tag">IA análisis</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item reveal">
+          <div class="tl-dot future">5</div>
+          <div class="tl-content">
+            <div class="tl-phase">Fase 5 — Futuro</div>
+            <div class="tl-title">Plataforma médica colaborativa</div>
+            <div class="tl-desc">Portal web para médicos donde pueden ver la adherencia de sus pacientes en tiempo real. Notificaciones automáticas si el paciente lleva 2+ días sin tomar. Integración con IMSS/ISSSTE.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">Portal médico</span><span class="tl-tag">IMSS/ISSSTE</span><span class="tl-tag">Notificaciones push</span><span class="tl-tag">iOS</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item reveal">
+          <div class="tl-dot future">6</div>
+          <div class="tl-content">
+            <div class="tl-phase">Visión a largo plazo</div>
+            <div class="tl-title">Ecosistema de salud digital</div>
+            <div class="tl-desc">IA predictiva que alerta antes de que el paciente falle su tratamiento. Pastillero 2.0 con pantalla OLED, recarga inalámbrica y conectividad WiFi directa. Versión iOS. App para farmacias.</div>
+            <div class="tl-tags">
+              <span class="tl-tag">IA predictiva</span><span class="tl-tag">OLED</span><span class="tl-tag">WiFi</span><span class="tl-tag">iOS</span><span class="tl-tag">Farmacias</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EQUIPO ═════════════════════════════════════════════════ -->
+  <section>
+    <div class="section-inner" style="text-align:center">
+      <div class="section-tag reveal" style="display:inline-block">Equipo</div>
+      <h2 class="section-title reveal">Hecho con 💙 en México</h2>
+      <p class="section-desc reveal" style="margin:0 auto 36px">Un proyecto de innovación en salud digital desarrollado desde cero.</p>
+      <div class="team-card reveal">
+        <div class="team-avatar"><span class="material-icons">person</span></div>
+        <div>
+          <div class="team-name">Edgar Azcarí Pérez García</div>
+          <div class="team-role">Desarrollador Full Stack · IoT Engineer</div>
+          <div class="team-desc">
+            Diseñó y desarrolló MyVita de principio a fin: arquitectura backend segura,
+            app Android con Cordova, integración de IA médica, firmware ESP32 y UX/UI completo.
+            Proyecto desarrollado para demostrar el potencial de la tecnología en la salud pública.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CTA FINAL ══════════════════════════════════════════════ -->
+  <section class="cta-section" id="cta">
+    <h2>¿Listo para controlar<br>tu medicación?</h2>
+    <p>MyVita es completamente gratuita. Descárgala ahora y empieza hoy mismo.</p>
+    <div class="cta-btns">
+      <a href="https://github.com/paperon122223/myvita-backend/releases" class="btn-white">
+        <span class="material-icons">android</span> Descargar APK para Android
+      </a>
+      <a href="https://github.com/paperon122223" class="btn-white-outline">
+        <span class="material-icons">code</span> Ver código en GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ═════════════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-logo">❤️ MyVita</div>
+    <div class="footer-links">
+      <a href="#features">Características</a>
+      <a href="#iot">Pastillero</a>
+      <a href="#tech">Tecnología</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="https://github.com/paperon122223">GitHub</a>
+    </div>
+    <div class="footer-copy">© 2025 MyVita · Todos los derechos reservados</div>
+    <div class="footer-made">Hecho con ❤️ en México · Proyecto de innovación médica</div>
+  </footer>
+
+  <script>
+    // Animaciones al hacer scroll
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Parpadeo del LED del pastillero
+    setInterval(() => {
+      const led = document.querySelector('.pill-comp.on');
+      if (led) led.style.opacity = led.style.opacity === '0.5' ? '1' : '0.5';
+    }, 600);
+  </script>
+</body>
+</html>
